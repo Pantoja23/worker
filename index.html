@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pantoja Tile | Panel Staff</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { --green: #22c55e; --blue: #0b3c5d; --dark: #020617; --card: #0a0f1e; --red: #dc2626; --whatsapp: #25D366; }
+        body { margin: 0; font-family: 'Inter', sans-serif; background: var(--dark); color: #fff; padding-bottom: 40px; }
+        .hidden { display: none !important; }
+        header { background: var(--card); padding: 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); position: sticky; top:0; z-index:100; }
+        .container { padding: 15px; max-width: 500px; margin: auto; }
+        .work-card { background: var(--card); border-radius: 20px; padding: 20px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1); }
+        .id-badge { background: var(--blue); padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 700; }
+        .address-box { background: rgba(255,255,255,0.05); padding: 12px; border-radius: 10px; margin: 10px 0; font-size: 13px; color: #94a3b8; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); }
+        .description-box { background: rgba(34, 197, 94, 0.05); border-left: 3px solid var(--green); padding: 12px; margin: 12px 0; font-size: 13px; border-radius: 0 10px 10px 0; }
+        .btn-punch { width: 100%; padding: 16px; border: none; border-radius: 14px; font-weight: 900; color: #fff; cursor: pointer; font-size: 14px; margin-bottom: 10px; transition: 0.3s; }
+        .btn-action { padding: 12px; border-radius: 10px; border: 1px solid var(--green); background: transparent; color: var(--green); font-weight: 700; cursor: pointer; font-size: 11px; display: flex; align-items: center; justify-content: center; gap: 5px; }
+        .btn-print { background: #6366f1; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 10px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div id="login-screen" style="height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;">
+    <div style="background: var(--card); padding: 30px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); width: 100%; max-width: 350px; text-align: center;">
+        <i class="fas fa-hammer fa-3x" style="color:var(--green); margin-bottom:20px;"></i>
+        <h2>Pantoja Tile Staff</h2>
+        <input type="email" id="worker-email" placeholder="Tu correo electrónico" style="width: 100%; padding: 15px; border-radius: 10px; border: 1px solid #334155; background: #1e293b; color: white; margin-bottom: 20px; box-sizing: border-box;">
+        <button onclick="saveLogin()" style="width: 100%; background: var(--green); color: white; border: none; padding: 15px; border-radius: 10px; font-weight: 900; cursor: pointer;">ENTRAR</button>
+    </div>
+</div>
+
+<div id="main-panel" class="hidden">
+    <header>
+        <div style="display:flex; justify-content: space-between; align-items:center;">
+            <span id="user-display" style="font-size:10px; opacity:0.5;"></span>
+            <button onclick="localStorage.clear(); location.reload();" style="background:none; border:none; color:var(--red); font-size:10px; font-weight:bold;">CERRAR SESIÓN</button>
+        </div>
+        <h3 style="margin:5px 0 0 0;">Trabajos Activos</h3>
+    </header>
+
+    <div class="container">
+        <div id="loading-msg" style="text-align:center; padding:40px; opacity:0.5;">
+            <i class="fas fa-sync fa-spin fa-2x"></i><br><br>Cargando tus órdenes...
+        </div>
+        <div id="work-list"></div>
+    </div>
+</div>
+
+<script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbydCZHacGf57q6l7Wx2AIcRAEwMoh_bvZSAhYom1n8m-wBLL74x7B4IVp4CLHrsg1-47A/exec"; 
+    let USER_EMAIL = localStorage.getItem('pantoja_user_email');
+
+    window.onload = () => { if(USER_EMAIL) showPanel(); };
+
+    function saveLogin() {
+        const email = document.getElementById('worker-email').value.trim().toLowerCase();
+        if(!email.includes('@')) return alert("Por favor ingresa un correo válido.");
+        localStorage.setItem('pantoja_user_email', email);
+        USER_EMAIL = email;
+        showPanel();
+    }
+
+    function showPanel() {
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('main-panel').classList.remove('hidden');
+        document.getElementById('user-display').innerText = USER_EMAIL;
+        loadWorkOrders();
+    }
+
+    async function printHours(orderId, servicio) {
+        try {
+            const res = await fetch(`${SCRIPT_URL}?action=get_total_hours&orderId=${orderId}`);
+            const total = await res.text();
+            alert(`--- RESUMEN DE PAGO ---\n\nID Proyecto: ${orderId}\nServicio: ${servicio}\nTotal Horas Acumuladas: ${total} hrs\n\nToma una captura de pantalla para tu reporte.`);
+        } catch(e) { alert("Error al obtener horas."); }
+    }
+
+    async function punchAction(tipo, orderId) {
+        if(!confirm(`¿Deseas marcar ${tipo} para ID #${orderId}?`)) return;
+        
+        document.body.style.opacity = "0.5";
+        document.body.style.pointerEvents = "none";
+
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+            try {
+                await fetch(SCRIPT_URL, {
+                    method: "POST", mode: "no-cors",
+                    body: JSON.stringify({
+                        worker: USER_EMAIL,
+                        action: tipo,
+                        orderId: orderId,
+                        lat: pos.coords.latitude,
+                        lon: pos.coords.longitude
+                    })
+                });
+                tipo === 'START' ? localStorage.setItem('active_job_id', orderId) : localStorage.removeItem('active_job_id');
+                location.reload();
+            } catch (e) { 
+                alert("Error de red."); 
+                document.body.style.opacity = "1";
+                document.body.style.pointerEvents = "auto";
+            }
+        }, () => { alert("Error: Debes activar el GPS para marcar."); location.reload(); });
+    }
+
+    async function loadWorkOrders() {
+        try {
+            const res = await fetch(SCRIPT_URL);
+            const data = await res.json();
+            const activeId = localStorage.getItem('active_job_id');
+            
+            // FILTRO: Por correo y que el estatus sea exactamente "active"
+            const myOrders = data.filter(o => 
+                o.email_trabajador && o.email_trabajador.toLowerCase() === USER_EMAIL && 
+                o.estatus && o.estatus.toLowerCase() === 'active'
+            );
+
+            document.getElementById('loading-msg').style.display = 'none';
+            const listDiv = document.getElementById('work-list');
+
+            if(myOrders.length === 0) {
+                listDiv.innerHTML = "<div style='text-align:center; opacity:0.4; margin-top:50px;'>No tienes órdenes de trabajo activas hoy.</div>";
+                return;
+            }
+
+            listDiv.innerHTML = myOrders.map(order => {
+                const phone = String(order.telefono || '').replace(/\D/g,'');
+                const isThisActive = activeId == order.id;
+                const isOtherActive = activeId && activeId != order.id;
+
+                return `
+                <div class="work-card" style="${isThisActive ? 'border:2px solid var(--green)' : ''}">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span class="id-badge">ID: ${order.id}</span>
+                        <button class="btn-print" onclick="printHours('${order.id}', '${order.servicio}')">
+                            <i class="fas fa-print"></i> RECIBO HORAS
+                        </button>
+                    </div>
+
+                    <h3 style="margin:15px 0 5px 0; color:var(--green);">${order.servicio}</h3>
+                    <div style="font-weight:700;">${order.nombre_cliente}</div>
+                    <div class="address-box" onclick="window.open('https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.direccion)}')">
+                        <i class="fas fa-map-marker-alt" style="color:var(--red)"></i> ${order.direccion}
+                    </div>
+
+                    <div class="description-box">
+                        <strong>NOTAS ADMIN:</strong><br>${order.description_admin || 'No hay instrucciones adicionales.'}
+                    </div>
+
+                    <div style="margin:15px 0;">
+                        ${!activeId ? `<button class="btn-punch" style="background:var(--green)" onclick="punchAction('START', '${order.id}')">LLEGUÉ AL SITIO</button>` : ''}
+                        ${isThisActive ? `<button class="btn-punch" style="background:var(--red)" onclick="punchAction('END', '${order.id}')">TERMINE MI TURNO</button>` : ''}
+                        ${isOtherActive ? `<div style="text-align:center; font-size:11px; opacity:0.5; border:1px dashed #334155; padding:10px; border-radius:10px;">Tienes el trabajo #${activeId} activo. Termínalo primero.</div>` : ''}
+                    </div>
+
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                        <button class="btn-action" onclick="window.location.href='tel:${phone}'"><i class="fas fa-phone"></i> LLAMAR</button>
+                        <button class="btn-action" style="color:var(--whatsapp); border-color:var(--whatsapp);" onclick="window.open('https://wa.me/${phone}?text=Hola%20${encodeURIComponent(order.nombre_cliente)},%20soy%20de%20Pantoja%20Tile.%20Ya%20voy%20en%20camino.')"><i class="fab fa-whatsapp"></i> MENSAJE</button>
+                    </div>
+                </div>`;
+            }).join('');
+        } catch (e) { 
+            document.getElementById('loading-msg').innerText = "Error al conectar con el servidor."; 
+        }
+    }
+</script>
+</body>
+</html>
