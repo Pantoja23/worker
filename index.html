@@ -2,168 +2,236 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pantoja Tile | Panel Staff</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pantoja Tile | Staff Pro</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        :root { --green: #22c55e; --blue: #0b3c5d; --dark: #020617; --card: #0a0f1e; --red: #dc2626; --whatsapp: #25D366; }
-        body { margin: 0; font-family: 'Inter', sans-serif; background: var(--dark); color: #fff; padding-bottom: 40px; }
-        .hidden { display: none !important; }
-        header { background: var(--card); padding: 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); position: sticky; top:0; z-index:100; }
-        .container { padding: 15px; max-width: 500px; margin: auto; }
-        .work-card { background: var(--card); border-radius: 20px; padding: 20px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1); }
-        .id-badge { background: var(--blue); padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 700; }
-        .address-box { background: rgba(255,255,255,0.05); padding: 12px; border-radius: 10px; margin: 10px 0; font-size: 13px; color: #94a3b8; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); }
-        .description-box { background: rgba(34, 197, 94, 0.05); border-left: 3px solid var(--green); padding: 12px; margin: 12px 0; font-size: 13px; border-radius: 0 10px 10px 0; }
-        .btn-punch { width: 100%; padding: 16px; border: none; border-radius: 14px; font-weight: 900; color: #fff; cursor: pointer; font-size: 14px; margin-bottom: 10px; transition: 0.3s; }
-        .btn-action { padding: 12px; border-radius: 10px; border: 1px solid var(--green); background: transparent; color: var(--green); font-weight: 700; cursor: pointer; font-size: 11px; display: flex; align-items: center; justify-content: center; gap: 5px; }
-        .btn-print { background: #6366f1; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 10px; font-weight: bold; cursor: pointer; }
+        :root { 
+            --primary: #6366f1; 
+            --bg: #030712; 
+            --card: rgba(31, 41, 55, 0.6); 
+            --text: #f9fafb; 
+            --accent: #10b981; 
+            --red: #ef4444; 
+            --blue: #3b82f6;
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: var(--bg); 
+            color: var(--text); 
+            margin: 0; 
+            padding: 15px; 
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* LOGO DE FONDO DINÁMICO */
+        .bg-logo { 
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+            width: 90%; opacity: 0.04; filter: blur(10px); z-index: -1; pointer-events: none; 
+        }
+
+        .container { max-width: 480px; margin: auto; }
+
+        /* ESTILO GLASSMORPHISM */
+        .glass-card { 
+            background: var(--card); 
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border-radius: 24px; 
+            border: 1px solid var(--border); 
+            padding: 24px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            margin-bottom: 20px;
+        }
+
+        /* INPUTS MODERNOS */
+        .input-group { margin-bottom: 15px; text-align: left; }
+        .input-group label { display: block; font-size: 11px; font-weight: 800; color: var(--primary); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 1px; }
+        input, textarea { 
+            width: 100%; padding: 16px; border-radius: 16px; border: 1px solid var(--border); 
+            background: rgba(0,0,0,0.2); color: white; box-sizing: border-box; font-size: 16px; transition: 0.3s;
+        }
+        input:focus { border-color: var(--primary); outline: none; background: rgba(0,0,0,0.4); }
+
+        /* BOTONES DE ACCIÓN (ICONOS) */
+        .action-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin: 20px 0; }
+        .btn-circle { 
+            height: 60px; border-radius: 18px; border: none; color: white; font-size: 22px; 
+            display: flex; align-items: center; justify-content: center; text-decoration: none; transition: 0.3s;
+        }
+        .bg-ws { background: linear-gradient(135deg, #25d366, #128c7e); }
+        .bg-tel { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+        .bg-map { background: linear-gradient(135deg, #ef4444, #b91c1c); }
+        .btn-circle:active { transform: scale(0.92); }
+
+        /* TARJETAS DE TRABAJO */
+        .job-item { 
+            display: flex; justify-content: space-between; align-items: center; 
+            padding: 20px; border-radius: 20px; background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border); margin-bottom: 12px; transition: 0.3s;
+        }
+        .job-item:active { background: rgba(99, 102, 241, 0.1); border-color: var(--primary); }
+        .job-id-tag { background: var(--primary); font-size: 10px; font-weight: 900; padding: 4px 10px; border-radius: 8px; }
+
+        /* TIMER & PUNCH */
+        .timer-display { font-size: 3.5rem; font-weight: 800; text-align: center; margin: 15px 0; font-variant-numeric: tabular-nums; letter-spacing: -2px; color: white; }
+        
+        .btn-punch { 
+            width: 100%; padding: 20px; border-radius: 20px; border: none; font-weight: 800; font-size: 16px; 
+            display: flex; align-items: center; justify-content: center; gap: 12px; text-transform: uppercase; letter-spacing: 1px;
+        }
+        .in { background: var(--accent); color: #064e3b; box-shadow: 0 10px 20px rgba(16, 185, 129, 0.2); }
+        .out { background: var(--red); color: white; box-shadow: 0 10px 20px rgba(239, 68, 68, 0.2); }
+
+        .desc-text { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 16px; font-size: 14px; line-height: 1.6; color: #d1d5db; margin: 15px 0; }
     </style>
 </head>
 <body>
-
-<div id="login-screen" style="height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;">
-    <div style="background: var(--card); padding: 30px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); width: 100%; max-width: 350px; text-align: center;">
-        <i class="fas fa-hammer fa-3x" style="color:var(--green); margin-bottom:20px;"></i>
-        <h2>Pantoja Tile Staff</h2>
-        <input type="email" id="worker-email" placeholder="Tu correo electrónico" style="width: 100%; padding: 15px; border-radius: 10px; border: 1px solid #334155; background: #1e293b; color: white; margin-bottom: 20px; box-sizing: border-box;">
-        <button onclick="saveLogin()" style="width: 100%; background: var(--green); color: white; border: none; padding: 15px; border-radius: 10px; font-weight: 900; cursor: pointer;">ENTRAR</button>
-    </div>
-</div>
-
-<div id="main-panel" class="hidden">
-    <header>
-        <div style="display:flex; justify-content: space-between; align-items:center;">
-            <span id="user-display" style="font-size:10px; opacity:0.5;"></span>
-            <button onclick="localStorage.clear(); location.reload();" style="background:none; border:none; color:var(--red); font-size:10px; font-weight:bold;">CERRAR SESIÓN</button>
-        </div>
-        <h3 style="margin:5px 0 0 0;">Trabajos Activos</h3>
-    </header>
-
+    <img src="img/logo.png" class="bg-logo">
     <div class="container">
-        <div id="loading-msg" style="text-align:center; padding:40px; opacity:0.5;">
-            <i class="fas fa-sync fa-spin fa-2x"></i><br><br>Cargando tus órdenes...
+
+        <div id="login_section" style="padding-top: 80px; text-align: center;">
+            <img src="img/logo.png" style="width: 110px; margin-bottom: 30px; filter: drop-shadow(0 0 20px var(--primary));">
+            <div class="glass-card">
+                <h2 style="margin-bottom: 30px; letter-spacing: 2px;">STAFF <span style="color:var(--primary)">PRO</span></h2>
+                <div class="input-group">
+                    <label>Email Corporativo</label>
+                    <input type="email" id="email" placeholder="usuario@pantojatile.com">
+                </div>
+                <div class="input-group">
+                    <label>Contraseña</label>
+                    <input type="password" id="pass" placeholder="••••••••">
+                </div>
+                <button class="btn-punch in" onclick="login()" style="background:var(--primary); color:white; margin-top:10px;">Acceder al Sistema</button>
+            </div>
         </div>
-        <div id="work-list"></div>
+
+        <div id="list_section" style="display:none;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px; padding:0 10px;">
+                <h2 id="welcome_text" style="margin:0; font-size: 20px;"></h2>
+                <div onclick="location.reload()" style="background:rgba(239, 68, 68, 0.1); color:var(--red); padding:10px; border-radius:12px;"><i class="fas fa-power-off"></i></div>
+            </div>
+            <p style="font-size: 12px; color: var(--primary); font-weight: 800; text-transform: uppercase; margin-left: 10px; letter-spacing: 1px;">Trabajos Asignados</p>
+            <div id="jobs_container"></div>
+        </div>
+
+        <div id="work_panel" style="display:none;">
+            <div class="glass-card">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <span class="job-id-tag" id="active_job_id"></span>
+                    <i class="fas fa-arrow-left" onclick="cancelSelection()" style="color:#6b7280; font-size: 20px;"></i>
+                </div>
+                
+                <h2 id="active_job_client" style="margin:0; font-size: 28px;"></h2>
+                <p id="active_job_service" style="color:var(--primary); font-weight: 600; margin: 5px 0 20px 0; font-size: 14px;"></p>
+
+                <div class="action-grid">
+                    <a id="link_phone" class="btn-circle bg-tel"><i class="fas fa-phone-alt"></i></a>
+                    <a id="link_ws" class="btn-circle bg-ws" target="_blank"><i class="fab fa-whatsapp"></i></a>
+                    <a id="link_maps" class="btn-circle bg-map" target="_blank"><i class="fas fa-directions"></i></a>
+                </div>
+
+                <div class="input-group">
+                    <label>Instrucciones del Proyecto</label>
+                    <div class="desc-text" id="active_job_desc"></div>
+                </div>
+
+                <div class="timer-display" id="timer">00:00:00</div>
+                
+                <div class="input-group">
+                    <label>Reporte de Actividad</label>
+                    <textarea id="staff_notes" rows="3" placeholder="Describe brevemente el avance de hoy..."></textarea>
+                </div>
+                
+                <button id="btn_punch" class="btn-punch in" onclick="handlePunch()">
+                    <i class="fas fa-play"></i> Punch In
+                </button>
+            </div>
+        </div>
     </div>
-</div>
 
 <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbydCZHacGf57q6l7Wx2AIcRAEwMoh_bvZSAhYom1n8m-wBLL74x7B4IVp4CLHrsg1-47A/exec"; 
-    let USER_EMAIL = localStorage.getItem('pantoja_user_email');
+    const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbxbrwVzws8GlD8tdq7eS7eWO6K_XqHNNfR7atniDElsD-9XZ5jcStyWTfksGcgj_WiV/exec"; 
+    let currentUser = "";
+    let selectedJob = null;
+    let isWorking = false;
+    let startTime;
+    let timerInterval;
 
-    window.onload = () => { if(USER_EMAIL) showPanel(); };
-
-    function saveLogin() {
-        const email = document.getElementById('worker-email').value.trim().toLowerCase();
-        if(!email.includes('@')) return alert("Por favor ingresa un correo válido.");
-        localStorage.setItem('pantoja_user_email', email);
-        USER_EMAIL = email;
-        showPanel();
+    async function login() {
+        const email = document.getElementById('email').value;
+        const pass = document.getElementById('pass').value;
+        const res = await fetch(`${URL_SCRIPT}?action=login_staff&email=${email}&pass=${pass}`);
+        const data = await res.json();
+        if(data.success) {
+            currentUser = data.name;
+            document.getElementById('welcome_text').innerText = "Hola, " + currentUser.split(' ')[0];
+            document.getElementById('login_section').style.display = 'none';
+            document.getElementById('list_section').style.display = 'block';
+            loadJobs();
+        } else { alert("Credenciales incorrectas."); }
     }
 
-    function showPanel() {
-        document.getElementById('login-screen').classList.add('hidden');
-        document.getElementById('main-panel').classList.remove('hidden');
-        document.getElementById('user-display').innerText = USER_EMAIL;
-        loadWorkOrders();
+    async function loadJobs() {
+        const res = await fetch(`${URL_SCRIPT}?action=get_worker_orders&workerName=${currentUser}`);
+        const jobs = await res.json();
+        document.getElementById('jobs_container').innerHTML = jobs.map(t => `
+            <div class="job-item" onclick='viewJob(${JSON.stringify(t)})'>
+                <div>
+                    <span class="job-id-tag">${t.id}</span>
+                    <div style="margin-top:10px; font-weight:800; font-size:18px;">${t.nombre_cliente}</div>
+                    <div style="color:var(--primary); font-size:12px; font-weight:600;">${t.servicio}</div>
+                </div>
+                <i class="fas fa-chevron-right" style="color:var(--border);"></i>
+            </div>
+        `).join('');
     }
 
-    async function printHours(orderId, servicio) {
-        try {
-            const res = await fetch(`${SCRIPT_URL}?action=get_total_hours&orderId=${orderId}`);
-            const total = await res.text();
-            alert(`--- RESUMEN DE PAGO ---\n\nID Proyecto: ${orderId}\nServicio: ${servicio}\nTotal Horas Acumuladas: ${total} hrs\n\nToma una captura de pantalla para tu reporte.`);
-        } catch(e) { alert("Error al obtener horas."); }
-    }
-
-    async function punchAction(tipo, orderId) {
-        if(!confirm(`¿Deseas marcar ${tipo} para ID #${orderId}?`)) return;
+    function viewJob(job) {
+        selectedJob = job;
+        document.getElementById('list_section').style.display = 'none';
+        document.getElementById('work_panel').style.display = 'block';
+        document.getElementById('active_job_id').innerText = job.id;
+        document.getElementById('active_job_client').innerText = job.nombre_cliente;
+        document.getElementById('active_job_service').innerText = job.servicio;
+        document.getElementById('active_job_desc').innerText = job.instrucciones || "Favor de contactar al admin para instrucciones.";
         
-        document.body.style.opacity = "0.5";
-        document.body.style.pointerEvents = "none";
-
-        navigator.geolocation.getCurrentPosition(async (pos) => {
-            try {
-                await fetch(SCRIPT_URL, {
-                    method: "POST", mode: "no-cors",
-                    body: JSON.stringify({
-                        worker: USER_EMAIL,
-                        action: tipo,
-                        orderId: orderId,
-                        lat: pos.coords.latitude,
-                        lon: pos.coords.longitude
-                    })
-                });
-                tipo === 'START' ? localStorage.setItem('active_job_id', orderId) : localStorage.removeItem('active_job_id');
-                location.reload();
-            } catch (e) { 
-                alert("Error de red."); 
-                document.body.style.opacity = "1";
-                document.body.style.pointerEvents = "auto";
-            }
-        }, () => { alert("Error: Debes activar el GPS para marcar."); location.reload(); });
+        document.getElementById('link_phone').href = `tel:${job.telefono}`;
+        const msg = encodeURIComponent(`Hola ${job.nombre_cliente}, le saluda ${currentUser} de Pantoja Tile. Ya estoy en camino a su domicilio para el proyecto de ${job.servicio}. ¡Nos vemos pronto!`);
+        document.getElementById('link_ws').href = `https://wa.me/1${String(job.telefono).replace(/\D/g,'')}?text=${msg}`;
+        document.getElementById('link_maps').href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.direccion)}`;
     }
 
-    async function loadWorkOrders() {
-        try {
-            const res = await fetch(SCRIPT_URL);
-            const data = await res.json();
-            const activeId = localStorage.getItem('active_job_id');
-            
-            // FILTRO: Por correo y que el estatus sea exactamente "active"
-            const myOrders = data.filter(o => 
-                o.email_trabajador && o.email_trabajador.toLowerCase() === USER_EMAIL && 
-                o.estatus && o.estatus.toLowerCase() === 'active'
-            );
+    function cancelSelection() {
+        if(isWorking) return;
+        document.getElementById('work_panel').style.display = 'none';
+        document.getElementById('list_section').style.display = 'block';
+    }
 
-            document.getElementById('loading-msg').style.display = 'none';
-            const listDiv = document.getElementById('work-list');
-
-            if(myOrders.length === 0) {
-                listDiv.innerHTML = "<div style='text-align:center; opacity:0.4; margin-top:50px;'>No tienes órdenes de trabajo activas hoy.</div>";
-                return;
-            }
-
-            listDiv.innerHTML = myOrders.map(order => {
-                const phone = String(order.telefono || '').replace(/\D/g,'');
-                const isThisActive = activeId == order.id;
-                const isOtherActive = activeId && activeId != order.id;
-
-                return `
-                <div class="work-card" style="${isThisActive ? 'border:2px solid var(--green)' : ''}">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span class="id-badge">ID: ${order.id}</span>
-                        <button class="btn-print" onclick="printHours('${order.id}', '${order.servicio}')">
-                            <i class="fas fa-print"></i> RECIBO HORAS
-                        </button>
-                    </div>
-
-                    <h3 style="margin:15px 0 5px 0; color:var(--green);">${order.servicio}</h3>
-                    <div style="font-weight:700;">${order.nombre_cliente}</div>
-                    <div class="address-box" onclick="window.open('https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.direccion)}')">
-                        <i class="fas fa-map-marker-alt" style="color:var(--red)"></i> ${order.direccion}
-                    </div>
-
-                    <div class="description-box">
-                        <strong>NOTAS ADMIN:</strong><br>${order.description_admin || 'No hay instrucciones adicionales.'}
-                    </div>
-
-                    <div style="margin:15px 0;">
-                        ${!activeId ? `<button class="btn-punch" style="background:var(--green)" onclick="punchAction('START', '${order.id}')">LLEGUÉ AL SITIO</button>` : ''}
-                        ${isThisActive ? `<button class="btn-punch" style="background:var(--red)" onclick="punchAction('END', '${order.id}')">TERMINE MI TURNO</button>` : ''}
-                        ${isOtherActive ? `<div style="text-align:center; font-size:11px; opacity:0.5; border:1px dashed #334155; padding:10px; border-radius:10px;">Tienes el trabajo #${activeId} activo. Termínalo primero.</div>` : ''}
-                    </div>
-
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                        <button class="btn-action" onclick="window.location.href='tel:${phone}'"><i class="fas fa-phone"></i> LLAMAR</button>
-                        <button class="btn-action" style="color:var(--whatsapp); border-color:var(--whatsapp);" onclick="window.open('https://wa.me/${phone}?text=Hola%20${encodeURIComponent(order.nombre_cliente)},%20soy%20de%20Pantoja%20Tile.%20Ya%20voy%20en%20camino.')"><i class="fab fa-whatsapp"></i> MENSAJE</button>
-                    </div>
-                </div>`;
-            }).join('');
-        } catch (e) { 
-            document.getElementById('loading-msg').innerText = "Error al conectar con el servidor."; 
+    async function handlePunch() {
+        const btn = document.getElementById('btn_punch');
+        const notes = document.getElementById('staff_notes').value;
+        if(!isWorking) {
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registrando...';
+            await fetch(URL_SCRIPT, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'PUNCH_IN', id: selectedJob.id, worker: currentUser, cliente: selectedJob.nombre_cliente, direccion: selectedJob.direccion, servicio: selectedJob.servicio })});
+            isWorking = true;
+            startTime = new Date();
+            btn.className = "btn-punch out";
+            btn.innerHTML = '<i class="fas fa-stop"></i> Terminar Turno';
+            timerInterval = setInterval(() => {
+                let diff = Math.floor((new Date() - startTime) / 1000);
+                let h = Math.floor(diff / 3600), m = Math.floor((diff % 3600) / 60), s = diff % 60;
+                document.getElementById('timer').innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+            }, 1000);
+        } else {
+            if(!notes) return alert("Escribe el reporte de actividad antes de salir.");
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+            await fetch(URL_SCRIPT, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'PUNCH_OUT', id: selectedJob.id, worker: currentUser, notas: notes })});
+            location.reload();
         }
     }
 </script>
