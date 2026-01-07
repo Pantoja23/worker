@@ -165,7 +165,7 @@
 </div>
 
 <script>
-    const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbywGPJB_7ignLa8kulMqALnhbHpc-XzAYZDu3U1VRdYPanmfbF26HmWs7pzDMP98yewcQ/exec"; 
+    const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbx9RoEFYdx3ILKAgBzcxcKpT-eaZ4mmb_sBAlwy9IlGRRU7zj-O-NtcAKbd5XHC1Rs04Q/exec"; 
     
     let currentUser = localStorage.getItem('panto_user');
     let isClocked = false;
@@ -263,40 +263,45 @@
     }
 
     async function handlePunch() {
-        const notes = document.getElementById('staff_notes').value;
-        if(isClocked && notes.length < 5) return alert("Describe tu trabajo.");
-        
-        toggleLoader(true);
-        const currentWeek = getISOWeek(); // CALCULA LA SEMANA ANTES DE ENVIAR
+    const notes = document.getElementById('staff_notes').value;
+    if(isClocked && notes.length < 5) return alert("Describe tu trabajo.");
+    
+    toggleLoader(true);
+    
+    // Obtener datos del dispositivo
+    const d = new Date();
+    const horaLocal = d.getHours().toString().padStart(2,'0') + ":" + d.getMinutes().toString().padStart(2,'0') + ":" + d.getSeconds().toString().padStart(2,'0');
+    const fechaLocal = (d.getMonth()+1).toString().padStart(2,'0') + "/" + d.getDate().toString().padStart(2,'0') + "/" + d.getFullYear();
+    const semanaISO = getISOWeek();
 
-        navigator.geolocation.getCurrentPosition(async (pos) => {
-            const coords = pos.coords.latitude + "," + pos.coords.longitude;
-            const action = isClocked ? 'PUNCH_OUT' : 'PUNCH_IN';
-            try {
-                // AQUÍ AGREGAMOS 'semana_no' AL PAYLOAD QUE SE ENVÍA AL EXCEL
-                const payload = { 
-                    action, 
-                    worker: currentUser, 
-                    id: window.activeJob.id, 
-                    notas: notes, 
-                    coords,
-                    semana_no: currentWeek 
-                };
-                
-                await fetch(URL_SCRIPT, { method: 'POST', body: JSON.stringify(payload)});
-                
-                if(!isClocked) { 
-                    localStorage.setItem('start_time', Date.now()); 
-                    localStorage.setItem('active_job_id', window.activeJob.id); 
-                } else { 
-                    localStorage.removeItem('start_time'); 
-                    localStorage.removeItem('active_job_id'); 
-                }
-                location.reload();
-            } catch(e) { alert("Error al guardar"); toggleLoader(false); }
-        }, () => { alert("Activa GPS"); toggleLoader(false); }, {enableHighAccuracy:true});
-    }
-
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+        const coords = pos.coords.latitude + "," + pos.coords.longitude;
+        const action = isClocked ? 'PUNCH_OUT' : 'PUNCH_IN';
+        try {
+            const payload = { 
+                action, 
+                worker: currentUser, 
+                id: window.activeJob.id, 
+                notas: notes, 
+                coords,
+                semana_no: semanaISO,
+                hora_tel: horaLocal,
+                fecha_tel: fechaLocal
+            };
+            
+            await fetch(URL_SCRIPT, { method: 'POST', body: JSON.stringify(payload)});
+            
+            if(!isClocked) { 
+                localStorage.setItem('start_time', Date.now()); 
+                localStorage.setItem('active_job_id', window.activeJob.id); 
+            } else { 
+                localStorage.removeItem('start_time'); 
+                localStorage.removeItem('active_job_id'); 
+            }
+            location.reload();
+        } catch(e) { alert("Error"); toggleLoader(false); }
+    }, () => { alert("Activa GPS"); toggleLoader(false); }, {enableHighAccuracy:true});
+}
     function updatePunchButton(clocked) {
         const btn = document.getElementById('btn_punch');
         btn.innerText = clocked ? "FINALIZAR JORNADA" : "EMPEZAR JORNADA";
