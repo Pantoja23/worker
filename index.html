@@ -165,13 +165,12 @@
 </div>
 
 <script>
-    const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbx9RoEFYdx3ILKAgBzcxcKpT-eaZ4mmb_sBAlwy9IlGRRU7zj-O-NtcAKbd5XHC1Rs04Q/exec"; 
+    const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbxBWZxLBHbT7J_F7fkRIMFC5vkJKbj80IOXIJkRy4qdmrtPNAgS-X6sXHZi6sOdC-bF/exec"; 
     
     let currentUser = localStorage.getItem('panto_user');
     let isClocked = false;
     let timerInterval;
 
-    // ESTA FUNCIÓN CALCULA EL NÚMERO DE SEMANA EXACTO
     function getISOWeek() {
         const hoy = new Date();
         const d = new Date(Date.UTC(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()));
@@ -192,13 +191,38 @@
 
     function toggleLoader(show) { document.getElementById('loader').classList.toggle('hidden', !show); }
 
-    function showApp() {
+    async function showApp() {
         document.getElementById('view_login').classList.add('hidden');
         document.getElementById('view_list').classList.remove('hidden');
         document.getElementById('welcome_name').innerText = "Hola, " + currentUser.split(' ')[0];
         document.getElementById('week_display').innerText = "Semana " + getISOWeek();
-        loadJobs();
-        checkRecoverClock();
+        
+        toggleLoader(true);
+        // 1. Verificamos status primero para saber si hay algo abierto
+        await checkRecoverClock(); 
+        // 2. Cargamos trabajos (esta función ahora maneja la redirección)
+        await loadJobs();          
+        toggleLoader(false);
+    }
+
+    async function checkRecoverClock() {
+        try {
+            const res = await fetch(`${URL_SCRIPT}?action=check_status&workerName=${encodeURIComponent(currentUser)}`);
+            const status = await res.json();
+            if(status.active) {
+                isClocked = true;
+                localStorage.setItem('active_job_id', status.jobId);
+                // REGLA: Usar el tiempo que el servidor manda desde Columna F
+                localStorage.setItem('start_time', status.startTimeMillis);
+                startTimer(parseInt(status.startTimeMillis));
+            } else {
+                isClocked = false;
+                localStorage.removeItem('start_time');
+                localStorage.removeItem('active_job_id');
+                if(timerInterval) clearInterval(timerInterval);
+                document.getElementById('timer').innerText = "00:00:00";
+            }
+        } catch(e) { console.error("Error recuperando status"); }
     }
 
     async function handleLogin() {
@@ -207,17 +231,17 @@
         if(!email || !pass) return alert("Completa los datos");
         toggleLoader(true);
         try {
-            const res = await fetch(`${URL_SCRIPT}?action=login_staff&email=${encodeURIComponent(email)}&pass=${encodeURIComponent(pass)}`);
+            const res = await fetch(`${URL_SCRIPT}?action=login_staff&email=${encodeURIComponent(email)}&pass=${encodeURIComponent(pass)}&t=${Date.now()}`);
             const data = await res.json();
             if(data.success) { 
                 localStorage.setItem('panto_user', data.name);
                 localStorage.setItem('panto_last_email', email);
                 location.reload(); 
             } else { 
-                alert("Error de acceso"); 
+                alert(data.msg || "Error de acceso: Credenciales incorrectas"); 
                 toggleLoader(false);
             }
-        } catch(e) { alert("Error de red"); toggleLoader(false); }
+        } catch(e) { alert("Error de red o servidor"); toggleLoader(false); }
     }
 
     async function loadJobs() {
@@ -233,6 +257,8 @@
                     <i class="fas fa-chevron-right" style="color:var(--p); filter: drop-shadow(0 0 5px var(--p));"></i>
                 </div>
             `).join('');
+            
+            // REDIRECCIÓN AUTOMÁTICA SI HAY ORDEN ABIERTA
             const activeId = localStorage.getItem('active_job_id');
             if(activeId) {
                 const jobActivo = jobs.find(j => String(j.id) === String(activeId));
@@ -242,66 +268,65 @@
     }
 
     function viewJob(j) {
-        window.activeJob = j;
-        document.getElementById('view_detail').classList.remove('hidden');
-        document.getElementById('det_client').innerText = j.nombre_cliente;
-        document.getElementById('det_service').innerText = j.servicio;
-        document.getElementById('det_admin').innerText = j.instrucciones || "Sin instrucciones.";
-        const historyDiv = document.getElementById('history_notes');
-        historyDiv.innerText = (j.historial_notas && j.historial_notas !== "Sin notas previas.") ? j.historial_notas : "Sin notas previas.";
+    window.activeJob = j;
+    document.getElementById('view_detail').classList.remove('hidden');
+    document.getElementById('det_client').innerText = j.nombre_cliente;
+    document.getElementById('det_service').innerText = j.servicio;
+    document.getElementById('det_admin').innerText = j.instrucciones || j.description_admin || "Sin instrucciones.";
+    
+    // --- ACTUALIZACIÓN PARA MOSTRAR NOTAS DE COLUMNA N (Notas_Staff) ---
+    const historyDiv = document.getElementById('history_notes');
+    
+    // Agregamos j.notas_staff a la lógica de búsqueda
+    const notaPrev = j.notas_staff || j.ultima_nota || j.historial_notas || "Sin reportes previos.";
+    const staffPrev = j.ultimo_trabajador ? `[${j.ultimo_trabajador}]: ` : "";
+    
+    historyDiv.innerText = staffPrev + notaPrev;
+    // ------------------------------------------------------------------
 
-        document.getElementById('link_wa').onclick = () => {
-            const hr = new Date().getHours();
-            const saludo = hr < 12 ? "Buenos días" : (hr < 19 ? "Buenas tardes" : "Buenas noches");
-            const msg = encodeURIComponent(`${saludo} ${j.nombre_cliente}, le saluda el Staff de Pantoja Elite. 💎\n\nLe informo que ya voy en camino a su ubicación para el servicio.\n\n¡Nos vemos pronto!`);
-            window.open(`https://wa.me/${j.telefono.toString().replace(/\D/g,'')}?text=${msg}`, '_blank');
-        };
+    document.getElementById('link_wa').onclick = () => {
+        const hr = new Date().getHours();
+        const saludo = hr < 12 ? "Buenos días" : (hr < 19 ? "Buenas tardes" : "Buenas noches");
+        const msg = encodeURIComponent(`${saludo} ${j.nombre_cliente}, le saluda el Staff de Pantoja Elite. 💎\n\nLe informo que ya voy en camino a su ubicación para el servicio.`);
+        window.open(`https://wa.me/${j.telefono.toString().replace(/\D/g,'')}?text=${msg}`, '_blank');
+    };
 
-        document.getElementById('link_map').href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(j.direccion)}`;
-        document.getElementById('link_tel').href = `tel:${j.telefono}`;
-        updatePunchButton(isClocked && localStorage.getItem('active_job_id') == j.id);
-    }
+    document.getElementById('link_map').href = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(j.direccion)}&travelmode=driving`;
+    document.getElementById('link_tel').href = `tel:${j.telefono}`;
+    updatePunchButton(isClocked && localStorage.getItem('active_job_id') == j.id);
+}
 
     async function handlePunch() {
-    const notes = document.getElementById('staff_notes').value;
-    if(isClocked && notes.length < 5) return alert("Describe tu trabajo.");
-    
-    toggleLoader(true);
-    
-    // Obtener datos del dispositivo
-    const d = new Date();
-    const horaLocal = d.getHours().toString().padStart(2,'0') + ":" + d.getMinutes().toString().padStart(2,'0') + ":" + d.getSeconds().toString().padStart(2,'0');
-    const fechaLocal = (d.getMonth()+1).toString().padStart(2,'0') + "/" + d.getDate().toString().padStart(2,'0') + "/" + d.getFullYear();
-    const semanaISO = getISOWeek();
+        const notes = document.getElementById('staff_notes').value;
+        if(isClocked && notes.length < 5) return alert("Describe tu trabajo.");
+        
+        toggleLoader(true);
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+            const coords = pos.coords.latitude + "," + pos.coords.longitude;
+            const action = isClocked ? 'PUNCH_OUT' : 'PUNCH_IN';
+            try {
+                const payload = { 
+                    action, 
+                    worker: currentUser, 
+                    id: window.activeJob.id, 
+                    notas: notes, 
+                    coords: coords 
+                };
+                
+                await fetch(URL_SCRIPT, { method: 'POST', body: JSON.stringify(payload)});
+                
+                if(!isClocked) { 
+                    localStorage.setItem('start_time', Date.now()); 
+                    localStorage.setItem('active_job_id', window.activeJob.id); 
+                } else { 
+                    localStorage.removeItem('start_time'); 
+                    localStorage.removeItem('active_job_id'); 
+                }
+                location.reload();
+            } catch(e) { alert("Error al guardar registro"); toggleLoader(false); }
+        }, () => { alert("Es obligatorio activar el GPS para marcar asistencia."); toggleLoader(false); }, {enableHighAccuracy:true});
+    }
 
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-        const coords = pos.coords.latitude + "," + pos.coords.longitude;
-        const action = isClocked ? 'PUNCH_OUT' : 'PUNCH_IN';
-        try {
-            const payload = { 
-                action, 
-                worker: currentUser, 
-                id: window.activeJob.id, 
-                notas: notes, 
-                coords,
-                semana_no: semanaISO,
-                hora_tel: horaLocal,
-                fecha_tel: fechaLocal
-            };
-            
-            await fetch(URL_SCRIPT, { method: 'POST', body: JSON.stringify(payload)});
-            
-            if(!isClocked) { 
-                localStorage.setItem('start_time', Date.now()); 
-                localStorage.setItem('active_job_id', window.activeJob.id); 
-            } else { 
-                localStorage.removeItem('start_time'); 
-                localStorage.removeItem('active_job_id'); 
-            }
-            location.reload();
-        } catch(e) { alert("Error"); toggleLoader(false); }
-    }, () => { alert("Activa GPS"); toggleLoader(false); }, {enableHighAccuracy:true});
-}
     function updatePunchButton(clocked) {
         const btn = document.getElementById('btn_punch');
         btn.innerText = clocked ? "FINALIZAR JORNADA" : "EMPEZAR JORNADA";
@@ -312,18 +337,18 @@
         if(timerInterval) clearInterval(timerInterval);
         timerInterval = setInterval(() => {
             const diff = Math.floor((Date.now() - start) / 1000);
-            document.getElementById('timer').innerText = new Date(diff * 1000).toISOString().substr(11, 8);
+            if(diff < 0) return;
+            const h = Math.floor(diff / 3600).toString().padStart(2,'0');
+            const m = Math.floor((diff % 3600) / 60).toString().padStart(2,'0');
+            const s = Math.floor(diff % 60).toString().padStart(2,'0');
+            document.getElementById('timer').innerText = `${h}:${m}:${s}`;
         }, 1000);
     }
 
-    function checkRecoverClock() {
-        const start = localStorage.getItem('start_time');
-        if(start) { isClocked = true; startTimer(parseInt(start)); }
-    }
-
-    function closeDetail() { if(isClocked) alert("Turno en curso"); else document.getElementById('view_detail').classList.add('hidden'); }
+    function closeDetail() { if(isClocked) alert("Turno en curso. Debes finalizar para salir."); else document.getElementById('view_detail').classList.add('hidden'); }
     
     function logout() { 
+        if(isClocked) return alert("Finaliza tu trabajo antes de cerrar sesión");
         const lastEmail = localStorage.getItem('panto_last_email');
         localStorage.clear(); 
         if(lastEmail) localStorage.setItem('panto_last_email', lastEmail);
