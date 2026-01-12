@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -164,9 +165,11 @@
     </div>
 </div>
 
-<script>
-    const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbxBWZxLBHbT7J_F7fkRIMFC5vkJKbj80IOXIJkRy4qdmrtPNAgS-X6sXHZi6sOdC-bF/exec"; 
     
+
+<script>
+    const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbw7UPeKOuP8A9iPMiHATt9kR0onJl2BUV603rYLM2LMNmQ2dWE3GSX_vpIpygN74fPQew/exec"; 
+   
     let currentUser = localStorage.getItem('panto_user');
     let isClocked = false;
     let timerInterval;
@@ -198,21 +201,18 @@
         document.getElementById('week_display').innerText = "Semana " + getISOWeek();
         
         toggleLoader(true);
-        // 1. Verificamos status primero para saber si hay algo abierto
         await checkRecoverClock(); 
-        // 2. Cargamos trabajos (esta función ahora maneja la redirección)
         await loadJobs();          
         toggleLoader(false);
     }
 
     async function checkRecoverClock() {
         try {
-            const res = await fetch(`${URL_SCRIPT}?action=check_status&workerName=${encodeURIComponent(currentUser)}`);
+            const res = await fetch(`${URL_SCRIPT}?action=check_status&workerName=${encodeURIComponent(currentUser)}&t=${Date.now()}`);
             const status = await res.json();
             if(status.active) {
                 isClocked = true;
                 localStorage.setItem('active_job_id', status.jobId);
-                // REGLA: Usar el tiempo que el servidor manda desde Columna F
                 localStorage.setItem('start_time', status.startTimeMillis);
                 startTimer(parseInt(status.startTimeMillis));
             } else {
@@ -231,17 +231,17 @@
         if(!email || !pass) return alert("Completa los datos");
         toggleLoader(true);
         try {
-            const res = await fetch(`${URL_SCRIPT}?action=login_staff&email=${encodeURIComponent(email)}&pass=${encodeURIComponent(pass)}&t=${Date.now()}`);
+            const res = await fetch(`${URL_SCRIPT}?action=login_staff&email=${encodeURIComponent(email)}&pass=${encodeURIComponent(pass)}`);
             const data = await res.json();
             if(data.success) { 
                 localStorage.setItem('panto_user', data.name);
                 localStorage.setItem('panto_last_email', email);
                 location.reload(); 
             } else { 
-                alert(data.msg || "Error de acceso: Credenciales incorrectas"); 
+                alert(data.msg || "Error de acceso"); 
                 toggleLoader(false);
             }
-        } catch(e) { alert("Error de red o servidor"); toggleLoader(false); }
+        } catch(e) { alert("Error de conexión"); toggleLoader(false); }
     }
 
     async function loadJobs() {
@@ -252,58 +252,55 @@
                 <div class="native-card" onclick='viewJob(${JSON.stringify(t)})'>
                     <div>
                         <h3 style="margin:0; font-size:16px;">${t.nombre_cliente}</h3>
-                        <div style="font-size:11px; color:var(--neon); margin-top:4px;">${t.servicio} • <b style="color:white;">${t.horas_acumuladas}h</b></div>
+                        <div style="font-size:11px; color:var(--neon); margin-top:4px;">${t.servicio} • <b style="white-space:nowrap; color:white;">${t.horas_acumuladas}h acumuladas</b></div>
                     </div>
-                    <i class="fas fa-chevron-right" style="color:var(--p); filter: drop-shadow(0 0 5px var(--p));"></i>
+                    <i class="fas fa-chevron-right" style="color:var(--p);"></i>
                 </div>
             `).join('');
             
-            // REDIRECCIÓN AUTOMÁTICA SI HAY ORDEN ABIERTA
             const activeId = localStorage.getItem('active_job_id');
             if(activeId) {
                 const jobActivo = jobs.find(j => String(j.id) === String(activeId));
                 if(jobActivo) viewJob(jobActivo);
             }
-        } catch(e) { console.error("Error sync"); }
+        } catch(e) { console.error("Error cargando órdenes"); }
     }
 
     function viewJob(j) {
-    window.activeJob = j;
-    document.getElementById('view_detail').classList.remove('hidden');
-    document.getElementById('det_client').innerText = j.nombre_cliente;
-    document.getElementById('det_service').innerText = j.servicio;
-    document.getElementById('det_admin').innerText = j.instrucciones || j.description_admin || "Sin instrucciones.";
-    
-    // --- ACTUALIZACIÓN PARA MOSTRAR NOTAS DE COLUMNA N (Notas_Staff) ---
-    const historyDiv = document.getElementById('history_notes');
-    
-    // Agregamos j.notas_staff a la lógica de búsqueda
-    const notaPrev = j.notas_staff || j.ultima_nota || j.historial_notas || "Sin reportes previos.";
-    const staffPrev = j.ultimo_trabajador ? `[${j.ultimo_trabajador}]: ` : "";
-    
-    historyDiv.innerText = staffPrev + notaPrev;
-    // ------------------------------------------------------------------
+        window.activeJob = j;
+        document.getElementById('view_detail').classList.remove('hidden');
+        document.getElementById('det_client').innerText = j.nombre_cliente;
+        document.getElementById('det_service').innerText = j.servicio;
+        document.getElementById('det_admin').innerText = j.instrucciones || "Sin instrucciones.";
+        
+        // Mostrar historial previo
+        document.getElementById('history_notes').innerText = j.notas_staff || "Sin reportes previos.";
 
-    document.getElementById('link_wa').onclick = () => {
-        const hr = new Date().getHours();
-        const saludo = hr < 12 ? "Buenos días" : (hr < 19 ? "Buenas tardes" : "Buenas noches");
-        const msg = encodeURIComponent(`${saludo} ${j.nombre_cliente}, le saluda el Staff de Pantoja Elite. 💎\n\nLe informo que ya voy en camino a su ubicación para el servicio.`);
-        window.open(`https://wa.me/${j.telefono.toString().replace(/\D/g,'')}?text=${msg}`, '_blank');
-    };
+        // Links de acción
+        document.getElementById('link_wa').onclick = () => {
+            const msg = encodeURIComponent(`Hola ${j.nombre_cliente}, le saluda el Staff de Pantoja Elite. Ya voy en camino.`);
+            window.open(`https://wa.me/${j.telefono.toString().replace(/\D/g,'')}?text=${msg}`, '_blank');
+        };
 
-    document.getElementById('link_map').href = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(j.direccion)}&travelmode=driving`;
-    document.getElementById('link_tel').href = `tel:${j.telefono}`;
-    updatePunchButton(isClocked && localStorage.getItem('active_job_id') == j.id);
-}
+        document.getElementById('link_map').href = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(j.direccion)}`;
+        document.getElementById('link_tel').href = `tel:${j.telefono}`;
+        
+        updatePunchButton(isClocked && localStorage.getItem('active_job_id') == j.id);
+    }
 
     async function handlePunch() {
         const notes = document.getElementById('staff_notes').value;
-        if(isClocked && notes.length < 5) return alert("Describe tu trabajo.");
+        
+        // VALIDACIÓN: Si va a salir, debe escribir reporte
+        if(isClocked && notes.trim().length < 5) {
+            return alert("⚠️ Por favor escribe qué hiciste hoy en el reporte antes de finalizar.");
+        }
         
         toggleLoader(true);
         navigator.geolocation.getCurrentPosition(async (pos) => {
             const coords = pos.coords.latitude + "," + pos.coords.longitude;
             const action = isClocked ? 'PUNCH_OUT' : 'PUNCH_IN';
+            
             try {
                 const payload = { 
                     action, 
@@ -313,24 +310,41 @@
                     coords: coords 
                 };
                 
-                await fetch(URL_SCRIPT, { method: 'POST', body: JSON.stringify(payload)});
+                const response = await fetch(URL_SCRIPT, { 
+                    method: 'POST', 
+                    body: JSON.stringify(payload)
+                });
                 
-                if(!isClocked) { 
-                    localStorage.setItem('start_time', Date.now()); 
-                    localStorage.setItem('active_job_id', window.activeJob.id); 
-                } else { 
-                    localStorage.removeItem('start_time'); 
-                    localStorage.removeItem('active_job_id'); 
+                const result = await response.text(); // El servidor V24 devuelve "OK"
+                
+                if(result.includes("OK")) {
+                    if(!isClocked) { 
+                        localStorage.setItem('start_time', Date.now()); 
+                        localStorage.setItem('active_job_id', window.activeJob.id); 
+                    } else { 
+                        localStorage.removeItem('start_time'); 
+                        localStorage.removeItem('active_job_id'); 
+                    }
+                    location.reload();
+                } else {
+                    alert("Respuesta inesperada del servidor");
+                    toggleLoader(false);
                 }
-                location.reload();
-            } catch(e) { alert("Error al guardar registro"); toggleLoader(false); }
-        }, () => { alert("Es obligatorio activar el GPS para marcar asistencia."); toggleLoader(false); }, {enableHighAccuracy:true});
+            } catch(e) { 
+                alert("Error al guardar: " + e); 
+                toggleLoader(false); 
+            }
+        }, () => { 
+            alert("❌ Error: GPS obligatorio."); 
+            toggleLoader(false); 
+        }, {enableHighAccuracy:true});
     }
 
     function updatePunchButton(clocked) {
         const btn = document.getElementById('btn_punch');
         btn.innerText = clocked ? "FINALIZAR JORNADA" : "EMPEZAR JORNADA";
-        btn.classList.toggle('active', clocked);
+        btn.style.background = clocked ? "linear-gradient(135deg, #ff4b4b, #991b1b)" : "";
+        isClocked = clocked;
     }
 
     function startTimer(start) {
@@ -345,13 +359,14 @@
         }, 1000);
     }
 
-    function closeDetail() { if(isClocked) alert("Turno en curso. Debes finalizar para salir."); else document.getElementById('view_detail').classList.add('hidden'); }
+    function closeDetail() { 
+        if(isClocked) alert("Turno activo. Finaliza para volver."); 
+        else document.getElementById('view_detail').classList.add('hidden'); 
+    }
     
     function logout() { 
-        if(isClocked) return alert("Finaliza tu trabajo antes de cerrar sesión");
-        const lastEmail = localStorage.getItem('panto_last_email');
+        if(isClocked) return alert("Finaliza primero");
         localStorage.clear(); 
-        if(lastEmail) localStorage.setItem('panto_last_email', lastEmail);
         location.reload(); 
     }
 </script>
