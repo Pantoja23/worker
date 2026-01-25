@@ -206,7 +206,7 @@
     </div>
 
 <script>
-const URL_SCRIPT = "https://script.google.com/macros/s/AKfycby6TJ2I1rixICPMHoMd5OC8lw-lUWw1dY8pbT52NIJx6Hs-fbZseGA267W0wYx5KwNO/exec"; 
+const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbxT2tvV-3sFLohwUm28DLLCvU9siuKh731gEoC7ivZzXkcksgdkwlLA9BjXBWKcW43V/exec"; 
 let globalData = { clients: [], users: [], rawJobs: [] };
 let timerRef = 15;
 let session = null;
@@ -323,6 +323,7 @@ async function cargarTabla() {
         const trabajos = await res.json();
         globalData.rawJobs = trabajos;
 
+        // 1. Dashboard de conteo (esto lo dejamos igual)
         const dashboard = document.getElementById("dashboard_conteo");
         if (dashboard && trabajos.length > 0) {
             const conteos = trabajos.reduce((acc, c) => { 
@@ -336,10 +337,12 @@ async function cargarTabla() {
                 </div>`).join("");
         }
 
+        // 2. AGRUPACIÓN: Aquí es donde permitimos múltiples trabajadores por proyecto
         const agrupados = trabajos.reduce((acc, curr) => {
             if (!acc[curr.id]) {
                 acc[curr.id] = { 
-                    id: curr.id, cliente: curr.cliente, presupuesto: curr.presupuesto, equipo: {}, 
+                    id: curr.id, cliente: curr.cliente, presupuesto: curr.presupuesto, 
+                    equipo: {}, // Usamos objeto para evitar duplicar al mismo worker en el mismo job
                     compania: curr.compania, direccion: curr.direccion, status: curr.status 
                 };
             }
@@ -368,6 +371,7 @@ async function cargarTabla() {
             
             let direccionParaMapa = (hasIn) ? curr.add_in : curr.direccion;
 
+            // IMPORTANTE: Guardamos al trabajador usando su NOMBRE como llave
             acc[curr.id].equipo[curr.asignado_a] = { 
                 nombre: curr.asignado_a, 
                 horas: curr.horas_acumuladas || 0, 
@@ -379,30 +383,31 @@ async function cargarTabla() {
             return acc;
         }, {});
 
+        // 3. RENDERIZADO: Dibujar la tabla
         const tabla = document.getElementById("lista_trabajos");
         tabla.innerHTML = Object.values(agrupados).map(t => {
-            let botonAccion = "";
-            if (t.status === "ON APPROVAL") {
-                if (["Admin", "Master"].includes(session.rol)) {
-                    botonAccion = `<button class="auth-btn" onclick="cambiarEstatus('${t.id}', 'Active')">AUTHORIZE</button>`;
-                } else {
-                    botonAccion = `<span style="color:var(--warning); font-size:10px; font-weight:bold;">AWAITING...</span>`;
-                }
-            } else {
-                botonAccion = `<button class="done-btn" onclick="cambiarEstatus('${t.id}', 'Done')">DONE</button>`;
-            }
+            let botonAccion = (t.status === "ON APPROVAL") 
+                ? (["Admin", "Master"].includes(session.rol) 
+                    ? `<button class="auth-btn" onclick="cambiarEstatus('${t.id}', 'Active')">AUTHORIZE</button>` 
+                    : `<span style="color:var(--warning); font-size:10px; font-weight:bold;">AWAITING...</span>`)
+                : `<button class="done-btn" onclick="cambiarEstatus('${t.id}', 'Done')">DONE</button>`;
 
             const precioDisplay = (session.rol === "Master" || session.rol === "Admin") ? `$${t.presupuesto}` : "---";
 
+            // Convertimos el objeto equipo en un array para hacer el .map() de los botones
+            const fichasEquipo = Object.values(t.equipo).map(e => `
+                <div class="staff-tag ${e.clase}" style="${e.estilo}; cursor:pointer;" onclick="window.open('${e.mapa}', '_blank')">
+                    ${e.nombre}<br><small>${e.label} | ${e.horas}h</small>
+                </div>`).join("");
+
             return `<tr>
                 <td><b>#${t.id}</b><br><span style="font-size:10px; color:var(--primary)">${t.compania}</span><br>${t.cliente}</td>
-                <td><div style="display:flex; flex-wrap:wrap; gap:5px;">
-                        ${Object.values(t.equipo).map(e => `
-                            <div class="staff-tag ${e.clase}" style="${e.estilo}; cursor:pointer;" onclick="window.open('${e.mapa}', '_blank')">
-                                ${e.nombre}<br><small>${e.label} | ${e.horas}h</small>
-                            </div>`).join("")}
+                <td>
+                    <div style="display:flex; flex-wrap:wrap; gap:5px;">
+                        ${fichasEquipo}
                         <button class="add-btn" onclick="prepararAddStaff('${t.id}')">+</button>
-                    </div></td>
+                    </div>
+                </td>
                 <td style="font-weight:bold; color:var(--accent)">${precioDisplay}</td>
                 <td>${botonAccion}</td>
             </tr>`;
@@ -649,15 +654,40 @@ function prepararAddStaff(id) {
 
 async function confirmarNuevoStaff() {
     const sel = document.getElementById('modal_select_worker');
+    const workerName = sel.value;
+    const workerEmail = sel.options[sel.selectedIndex].dataset.email;
+    const orderId = document.getElementById('modal_order_id').value;
+
+    if (!workerName) return alert("Selecciona un trabajador");
+
     const payload = {
         action: 'ADD_STAFF',
-        id: document.getElementById('modal_order_id').value,
-        asignado_a: sel.value,
-        email_trabajador: sel.options[sel.selectedIndex].dataset.email,
+        id: orderId,
+        asignado_a: workerName,
+        email_trabajador: workerEmail,
         compania: session.compania
     };
-    await fetch(URL_SCRIPT, { method: 'POST', body: JSON.stringify(payload) });
-    cerrarModales(); cargarTabla();
+
+    try {
+        const res = await fetch(URL_SCRIPT, { 
+            method: 'POST', 
+            body: JSON.stringify(payload) 
+        });
+        const texto = await res.text();
+
+        if (texto.includes("SUCCESS")) {
+            cerrarModales();
+            // Refrescamos los datos para que aparezca la nueva ficha
+            await cargarTabla(); 
+            alert(`${workerName} añadido al proyecto #${orderId}`);
+        } else if (texto.includes("YA ASIGNADO")) {
+            alert("Este trabajador ya está asignado a este proyecto.");
+        } else {
+            alert("Error: " + texto);
+        }
+    } catch (e) {
+        alert("Error de conexión al agregar staff");
+    }
 }
 
 function cerrarModales() { document.querySelectorAll('.modal').forEach(m => m.style.display='none'); }
